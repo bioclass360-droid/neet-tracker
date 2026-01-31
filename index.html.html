@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEET Bio Heatmap Tracker</title>
+    <style>
+        /* CSS: Making it look good */
+        :root {
+            --bg-color: #f4f4f9;
+            --card-bg: #ffffff;
+            --weak: #ff4d4d;    /* Red */
+            --review: #ffcc00;  /* Yellow */
+            --strong: #2ecc71;  /* Green */
+            --neutral: #e0e0e0; /* Grey */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { margin-bottom: 10px; }
+        p.subtitle { color: #666; margin-bottom: 30px; }
+
+        /* The Heatmap Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .chapter-box {
+            aspect-ratio: 1/1; /* Square boxes */
+            background-color: var(--neutral);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            text-align: center;
+        }
+
+        .chapter-box:hover { transform: scale(1.05); }
+
+        /* Dynamic Classes for Colors */
+        .state-0 { background-color: var(--neutral); color: #555; }
+        .state-1 { background-color: var(--weak); color: white; }
+        .state-2 { background-color: var(--review); color: black; }
+        .state-3 { background-color: var(--strong); color: white; }
+
+        /* The Dashboard / Score */
+        .dashboard {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .score-box { font-size: 2rem; font-weight: bold; }
+        .score-label { font-size: 0.9rem; opacity: 0.8; }
+
+        /* The "Money Maker" Section */
+        #recommendation-box {
+            display: none; /* Hidden by default */
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border: 2px solid #2ecc71;
+            border-radius: 8px;
+            color: #27ae60;
+        }
+
+        button.reset-btn {
+            background: transparent;
+            border: 1px solid #999;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🧬 NEET Biology Heatmap</h1>
+        <p class="subtitle">Click a chapter to update status: <br>
+        <span style="color:#ff4d4d">● Weak</span> &nbsp; 
+        <span style="color:#ffcc00">● Review</span> &nbsp; 
+        <span style="color:#2ecc71">● Strong</span></p>
+
+        <div class="dashboard">
+            <div>
+                <div class="score-box" id="completion-rate">0%</div>
+                <div class="score-label">Preparedness</div>
+            </div>
+            <div>
+                <div class="score-box" id="weak-count">0</div>
+                <div class="score-label">Weak Areas</div>
+            </div>
+        </div>
+
+        <div class="grid" id="syllabus-grid">
+            </div>
+
+        <div id="recommendation-box">
+            <strong>💡 Pro Tip:</strong> It looks like <strong>Genetics</strong> is a weak area. 
+            <br><a href="#" target="_blank" style="color: #2ecc71; font-weight:bold;">Download the "1500+ Problems on Genetics" PDF here.</a>
+        </div>
+
+        <button class="reset-btn" onclick="resetGrid()">Reset Tracker</button>
+    </div>
+
+    <script>
+        // DATA: List of Chapters (You can add more)
+        const chapters = [
+            "Living World", "Biological Class.", "Plant Kingdom", "Animal Kingdom",
+            "Morphology", "Anatomy", "Str. Org Animals", "Cell Unit",
+            "Biomolecules", "Cell Cycle", "Transport", "Mineral Nutr.",
+            "Photosynthesis", "Respiration", "Plant Growth", "Digestion",
+            "Breathing", "Body Fluids", "Excretory", "Locomotion",
+            "Neural Control", "Chemical Coord.", "Reproduction Org", "Sexual Repro.",
+            "Human Repro.", "Repro. Health", "Genetics (Inherit.)", "Genetics (Molec.)",
+            "Evolution", "Human Health", "Food Prod.", "Microbes",
+            "Biotech: Princ.", "Biotech: App.", "Organisms & Pop", "Ecosystem",
+            "Biodiversity", "Env. Issues"
+        ];
+
+        const grid = document.getElementById('syllabus-grid');
+        const completionDisplay = document.getElementById('completion-rate');
+        const weakDisplay = document.getElementById('weak-count');
+        const recBox = document.getElementById('recommendation-box');
+
+        // STATE: 0=None, 1=Weak(Red), 2=Review(Yellow), 3=Strong(Green)
+        let chapterStates = new Array(chapters.length).fill(0);
+
+        // INITIALIZE GRID
+        function initGrid() {
+            grid.innerHTML = '';
+            chapters.forEach((chapter, index) => {
+                const box = document.createElement('div');
+                box.classList.add('chapter-box', 'state-0');
+                box.innerText = chapter;
+                box.onclick = () => toggleState(index, box);
+                grid.appendChild(box);
+            });
+            updateStats();
+        }
+
+        // HANDLE CLICKS
+        function toggleState(index, boxElement) {
+            // Cycle: 0 -> 1 -> 2 -> 3 -> 0
+            chapterStates[index] = (chapterStates[index] + 1) % 4;
+            
+            // Remove old class, add new class
+            boxElement.className = 'chapter-box state-' + chapterStates[index];
+            
+            updateStats();
+        }
+
+        // UPDATE LOGIC (The Brain)
+        function updateStats() {
+            let total = chapters.length;
+            let weak = 0;
+            let strong = 0;
+
+            chapterStates.forEach((state, i) => {
+                if (state === 1) weak++; // Red
+                if (state === 3) strong++; // Green
+                
+                // INTELLIGENT TRIGGER (Affiliate Logic)
+                // If the user marks "Genetics" (Index 26 or 27) as Weak, show the ad
+                if ((i === 26 || i === 27) && state === 1) {
+                    recBox.style.display = 'block';
+                }
+            });
+
+            // Calculate Percentage (Weighted: Green=100%, Yellow=50%)
+            let score = 0;
+            chapterStates.forEach(s => {
+                if (s === 3) score += 1;
+                if (s === 2) score += 0.5;
+            });
+            let percentage = Math.round((score / total) * 100);
+
+            // Update UI
+            completionDisplay.innerText = percentage + '%';
+            weakDisplay.innerText = weak;
+        }
+
+        function resetGrid() {
+            chapterStates.fill(0);
+            initGrid();
+            recBox.style.display = 'none';
+        }
+
+        // Start
+        initGrid();
+    </script>
+</body>
+</html>

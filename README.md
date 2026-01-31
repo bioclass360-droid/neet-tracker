@@ -4,7 +4,7 @@
 A visual progress tracker designed for NEET aspirants to identify their weak spots at a glance. Instead of boring checklists, this tool uses a "Heatmap" system to color-code your preparation level.
 
 ## 🚀 Live Demo
-[Insert your Netlify/GitHub Pages Link Here]
+https://bioclass360-droid.github.io/neet-tracker/
 
 ## ✨ Features
 - **Visual Feedback:** Instantly see your "Green" (Strong) vs "Red" (Weak) chapters.
